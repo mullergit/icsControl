@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ICS Control Esp8266</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+
+  <!--link rel="icon" href="data:,"-->
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body> 
+  <input type="button" onclick="ChangeColor()" value="Button" id="btn1" />
+  
+  <h1>ICS Control with bonjur</h1>
+  <div class="container-fluid">
+    <h1>ESP8266 Web Server bonjur </h1>
+
+    <div class="tab-content">
+            
+        <h2>Mini station </h2>
+        
+          
+              <span  id="temperature"> %Temperatura%</span>
+          
+          <li><a href="#">
+              <div class="span badge pull-right" id="humidite">-</div> umidade;</a>
+          </li>
+          <li><a href="#">
+              <div class="span badge pull-right" id="pa">-</div> Pression </a>
+          </li>         
+
+        <table id="table_mesures" data-toggle="table" data-show-colunns="true">
+          <thead>
+            <tr>
+              <th data-field="mesure" data-align="left" data-sortable="true" data-formatter="labelFormatter">Mesure</th>
+              <th data-field="valeur" data-align="left" data-sortable="true" data-formatter="valueFormatter">Valeur</th>
+              <th data-field="precedente" data-align="left" data-sortable="true" data-formatter="vpFormatter">Valeur Pr&eacute;c&eacute;dente</th>
+            </tr>
+          </thead>
+        </table>
+      
+      
+      <div class="tab-pane fade" id="tab_gpio">
+        <h2>GPIO</h2>
+        <div class="row">
+          <div class="col-xs-4 col-md-4">
+            <h4 class="text-left">D5
+              <div class="span badge" id="D5_etat">OFF</div>
+            </h4>
+          </div>
+          <div class="col-xs-4 col-md-4">
+            <div class="button btn btn-success btn-lg" id="D5_On" type="button">ON</div>
+          </div>
+          <div class="col-xs-4 col-md-4">
+            <div class="button btn btn-danger btn-lg" id="D5_Off" type="button">OFF</div>
+          </div>
+        </div>
+        
+                 
+      </div>
+      
+    </div>
+  </div>
+  <script>
+    var Timer_UdpateMesures;
+    
+          
+    setInterval(function (){
+          var xhttp = new XMLHttpRequest();
+          xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+              document.getElementById("temperature").innerHTML = this.responseText;
+          }
+          };
+          xhttp.open("GET", "/temperature", true);
+          xhttp.send();
+    }, 20000 ) ;
+
+    setInterval(updateMesures(), 10000 ) ;
+
+    function updateMesures(){
+      $.getJSON('/mesures.json', function(data){
+        console.log("Mesures envoyees : " + JSON.stringify(data) + "|" + data.t + "|" + data.h + "|" + data.pa) ;
+        $('#temperature').html(data.t);
+        $('#humidite').html(data.h);
+        $('#pa').html(data.pa); 
+      }).fail(function(err){
+        console.log("err getJSON mesures.json "+JSON.stringify(err));
+      });
+    };      
+    
+    // Commandes sur le GPIO - GPIO change
+    $('#D5_On').click(function(){ setBouton('D5','1'); });
+    
+    
+    
+    function setBouton(id, etat){
+      $.post("gpio?id=" + id + "&etat=" + etat).done(function(data){
+        //console.log("Retour setBouton " + JSON.stringify(data)); 
+        var id_gpio = "#" + id + "_etat";
+        //console.log(data);
+        if ( data.success === "1" | data.success === 1 ) {
+          if ( data.etat === "1" ) {
+            $(id_gpio).html("ON");
+          } else {
+            $(id_gpio).html("OFF");
+          }  
+        } else {
+          $(id_gpio).html('!');
+        }      
+      }).fail(function(err){
+        console.log("err setButton " + JSON.stringify(err));
+      });
+    } 
+    
+  </script>
+  <hr>
+
+
+
+
+  <hr>
+
+  <h2>Configuração dos códigos do ar condicionado</h2>
+  <p>GPIO state<strong> %STATE%</strong></p>
+  
+  <p>
+    <a href="/on"><button class="button">ON</button></a>
+    <a href="/off"><button class="button button2">OFF</button></a>
+  </p>  
+
+  <p>
+      <input type="button" class="button" onclick="ChangeColorBtn2()" value="Button2" id="btn2" />
+      <a href="index.html"><button class="button">teste</button></a>
+  </p>
+  
+  <p>
+    <span class="sensor-labels">Temperature</span>
+    <span id="temperature">%TEMPERATURE%</span>
+    <sup class="units">&deg;C</sup>
+  </p>
+  <p>
+    <span class="sensor-labels">Humidity</span>
+    <span id="humidity">%HUMIDITY%</span>
+    <sup class="units">&#37;</sup>
+  </p>
+  <p>
+    <span class="sensor-labels">Pressure</span>
+    <span id="pressure">%PRESSURE%</span>
+    <sup class="units">hPa</sup>
+  </p>
+  
+</body>
+
+
+
+
+<script language="javascript"> 
+/*
+$(document).ready(function(){
+  $("button").click(function(){
+    $("p").css("color", "red");
+  });
+}); */
+    function ChangeColorBtn2() {  
+         document.getElementById('btn2').style.backgroundColor='Red';          
+    } 
+    function ChangeColor() {  
+         document.getElementById('btn1').style.backgroundColor='Red';  
+         setTimeout("ChangeColor2()",2000);  
+    }  
+    function ChangeColor2(){  
+         document.getElementById('btn1').style.backgroundColor='lime';  
+    }   
+</script>
+
+<script>
+  setInterval(function (){
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        document.getElementById("temperature").innerHTML = this.responseText;
+      }
+    };
+    xhttp.open("GET", "/temperature", true);
+    xhttp.send();
+  }, 30000 ) ;
+
+  setInterval(function (){
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        document.getElementById("humidity").innerHTML = this.responseText;
+      }
+    };
+    xhttp.open("GET", "/humidity", true);
+    xhttp.send();
+  }, 30000 ) ;
+
+  setInterval(function ( ) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        document.getElementById("pressure").innerHTML = this.responseText;
+      }
+    };
+    xhttp.open("GET", "/pressure", true);
+    xhttp.send();
+  }, 30000 ) ;
+</script>
+</html>
