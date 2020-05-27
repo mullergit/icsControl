@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+  <html>
+  <head>
+    <meta name="viewport">
+    <meta charset="utf-8">
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/bootstrap-table.min.js"></script>
+    <link rel="stylesheet" href="css/bootstrap-table.min.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    
+    <title>ICS Control</title>
+  </head>
+  <!--onload="updateMesures()"-->
+  <body >
+        <h2 align="center">Configuração manual do tipo de ar condicionado</h2>          
+        <hr>
+        <h4 align="center">
+            <div  id="msgConfig">Clique em Iniciar para iniciar a configuração!</div>
+            <div  id="msgPassos"></div>
+            <div  id="msgPassos2"></div>
+        </h4>
+        <hr>
+        <div class="row" align="center">
+            <div class="col-xs-6 col-md-4">                
+              <div class="button btn btn-success btn-lg" id="bt_iniciarConfig" type="button">Iniciar</div>
+            </div>
+            <div class="col-xs-6 col-md-4">                
+                <div class="button btn btn-success btn-lg" id="bt_gravar" type="button">Gravar</div>
+            </div>
+        </div>  
+        <hr>
+        <div class="row">
+            <div align="center">Atenção: Mantenha o controle remoto do ar condicionado apontado para o controlador ICS-control durante a configuração</div>
+        </div>        
+    <script>
+        var timerflag = false;
+        var data;
+
+        setInterval(function ( ) { 
+            if(timerflag) {
+                $.getJSON('/mstate.json', function(data){
+                console.log("mstate.json : " + JSON.stringify(data) ) ;
+                }).fail(function(err){
+                console.log("err getJSON mstate.json "+JSON.stringify(err));
+                });
+                
+                if ( data.mstate === 1 ) {
+                    $("#msgConfig").html("");//data.msg);
+                } else {
+                    timerflag = false;
+                    $("#msgConfig").html(data.msg);
+                    $("#bt_iniciarConfig").html("Iniciar Configuração");
+                } 
+            }                           
+        }, 60000 ) ;      
+                 
+        $('#bt_iniciarConfig').click(function(){ initACconfig(); });      
+        function initACconfig(){
+            $.getJSON('/initACconfig.json', function(data){
+                console.log("data : " + JSON.stringify(data)) ;
+            document.getElementById('bt_iniciarConfig').style.backgroundColor='Orange';  
+            if ( data.mstate === 1 ) {
+                    $("#msgConfig").html("");//data.msg);
+                    $("#msgPassos").html( data.passos );
+                    $("#msgPassos2").html( " Em seguida clique em Gravar");
+                    $("#bt_iniciarConfig").html("Configurando "+data.msgPassos);
+            } else {
+                    timerflag = false;
+                    $("#msgConfig").html(data.msg);
+                    $("#bt_iniciarConfig").html("Iniciar Configuração");
+            } 
+            }).fail(function(err){
+            console.log("err GET(initACconfig)");
+            });
+            timerflag = true;
+        }; 
+
+        $('#bt_gravar').click(function(){ gravar(); });      
+        function gravar(){
+            document.getElementById('bt_gravar').style.backgroundColor='Red';
+            setTimeout("ChangeColor2()",500);
+            $.getJSON('/gravar.json', function(data){
+            console.log("statusConfig : " + JSON.stringify(data)) ;
+            if(data.msg==="Ar condicionado configurado com sucesso!"){
+                $("#msgConfig").html(data.msg);
+                $("#msgPassos").html("" );
+                $("#msgPassos2").html( "");
+                $("#bt_iniciarConfig").html("Configuração OK ");
+                setTimeout(function() {
+                    window.location.href = "/bonjur";
+                }, 5000);
+            }else{
+                if ( data.mstate === 1 ) {
+                        if(data.alerta===1){
+                            $("#msgConfig").html(data.msgAlerta);//data.msg);
+                        }else{
+                            $("#msgConfig").html("");//data.msg);
+                        }                
+                        $("#msgPassos").html( data.passos );
+                        $("#msgPassos2").html( " Em seguida clique em Gravar");
+                        $("#bt_iniciarConfig").html("Configurando "+data.msgPassos);
+                } else {
+                        timerflag = false;
+                        $("#msgConfig").html(data.msg);
+                        $("#bt_iniciarConfig").html("Iniciar Configuração");
+                } 
+            }
+            
+            }).fail(function(err){
+            console.log("err GET(initACconfig");
+            });
+            timerflag = true;
+        }; 
+        function ChangeColor() {  
+            document.getElementById('btn1').style.backgroundColor='Red';  
+            setTimeout("ChangeColor2()",2000);  
+        }  
+        function ChangeColor2(){  
+            document.getElementById('bt_gravar').style.backgroundColor='#449d44';  
+        }
+      
+        var supports_storage = supports_html5_storage();// Change current theme
+        if (supports_storage) {
+            var theme = localStorage.theme;
+            console.log("Recharge le theme " + theme);
+            if (theme) {
+            set_theme(get_themeUrl(theme));
+            }
+        }                
+        function get_themeUrl(theme_name){//  Get theme URL
+            $('#labelTheme').html("Th&egrave;me : " + theme_name);
+            var url_theme = "css/bootstrap.min.css";
+            if (supports_storage) {//save into the local database the selected theme
+            localStorage.theme = theme_name;
+            }
+            return url_theme;
+        }      
+        function set_theme(theme_url) {//  Apply theme
+            $('link[title="main"]').attr('href', theme_url);
+        }      
+        function supports_html5_storage(){//  local storage available ?
+            try {
+            return 'localStorage' in window && window['localStorage'] !== null;
+            } catch (e) {
+            return false;
+            }
+        }
+    </script>    
+  </body>
+</html

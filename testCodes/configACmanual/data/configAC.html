@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+  <html>
+  <head>
+    <meta name="viewport">
+    <meta charset="utf-8">
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/bootstrap-table.min.js"></script>
+    <!--<script src="js/bonjur.js"></script>-->
+    <link rel="stylesheet" href="css/bootstrap-table.min.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    
+    <title>ICS Control</title>
+  </head>
+  <!--onload="updateMesures()"-->
+  <body >
+    <div class="container-fluid">
+
+      <div class="tab-content"> </div>       
+
+        <div class="tab-pane fade in active" id="tab_configuration">
+          <h2>Configuração do tipo de ar condicionado        </h2>
+
+          <p> Para configurar aponte o controle remoto do ar condicionado para o controlador ICS-control</p>
+          <P> Aperte a tecla ON/OFF duas vezes, em seguida clique em iniciar.</P>
+          
+          <div class="row">
+            <div class="col-xs-6 col-md-4">
+                <h4 class="text-left">Status:
+                    <div class="span badge" id="statusConfig">Aguardando inicio da configuração!</div>
+                  </h4>
+            </div>
+            <div class="col-xs-6 col-md-4">                
+              <div class="button btn btn-success btn-lg" id="bt_iniciarConfig" type="button">INICIAR</div>
+            </div>
+            <div><input type="button"  onclick="updateMesures()" value="Button2" id="btn2" /></div>
+          </div>
+
+          <div class="row">
+                <div class="col-xs-6 col-md-4">
+                  <h4 class="text-left">D8
+                    <div class="span badge" id="D8_etat">OFF</div>
+                  </h4>
+                </div>
+                <div class="col-xs-6 col-md-4">
+                  <div class="button btn btn-success btn-lg" id="D8_On" type="button">ON</div>
+                </div>
+                <div class="col-xs-6 col-md-4">
+                  <div class="button btn btn-danger btn-lg" id="D8_Off" type="button">OFF</div>
+                </div>
+    
+              </div>
+
+        </div>
+
+       
+
+      
+
+    </div>
+    <script>
+      
+
+      // Create a timer than update data every n seconds
+      $('#tab_mesures').on('load-success.bs.table',function (e,data){
+        console.log("tab_mesures loaded");
+        if ($('.nav-tabs .active > a').attr('href')=='#tab_mesures') {
+          Timer_UdpateMesures=setTimeout(function(){
+            $('#table_mesures').bootstrapTable('refresh',{silent: true, showLoading: false, url: '/mesures.json'});//'/tabmesures.json'});
+            updateMesures();
+          },30000);
+        }                 
+      });   
+          
+      function updateMesures(){
+        $.getJSON('/mesures.json', function(data){
+          console.log("Mesures envoyees : " + JSON.stringify(data) + "|" + data.t + "|" + data.h + "|" + data.pa) ;
+          $('#temperature').html(data.t);
+          $('#humidite').html(data.h);
+          $('#pa').html(data.pa); 
+        }).fail(function(err){
+          console.log("err getJSON mesures.json "+JSON.stringify(err));
+        });
+      };     
+
+      $('#bt_iniciarConfig').click(function(){ initACconfig(); });
+
+      function ChangeColorBtn2() {  
+        document.getElementById('btn2').style.backgroundColor='Red';          
+   }
+      function initACconfig(){
+        $.getJSON('/initACconfig.json', function(data){
+          console.log("GET(initACconfig )" );
+          console.log("statusConfig : " + JSON.stringify(data)) ;
+          document.getElementById('statusConfig').style.Color='Red'; 
+          $('#statusConfig').html(data.status);
+        }).fail(function(err){
+          console.log("err GET(initACconfig");
+        });
+      }; 
+      
+      $('#D8_On').click(function(){ setBouton('D8','1'); });
+      $('#D8_Off').click(function(){ setBouton('D8','0'); });
+      
+      function setBouton(id, etat){
+        $.post("gpio?id=" + id + "&etat=" + etat).done(function(data){
+          console.log("Retour setBouton " + JSON.stringify(data)); 
+          var id_gpio = "#" + id + "_etat";
+          console.log(id_gpio);
+          if ( data.success === "1" ) {
+            if ( data.etat === "1" ) {
+              $(id_gpio).html("ON");
+            } else {
+              $(id_gpio).html("OFF");
+            }  
+          } else {
+            $(id_gpio).html('!');
+          }      
+        }).fail(function(err){
+          console.log("err setButton " + JSON.stringify(err));
+        });
+      }       
+      
+      var supports_storage = supports_html5_storage();// Change current theme
+      if (supports_storage) {
+        var theme = localStorage.theme;
+        console.log("Recharge le theme " + theme);
+        if (theme) {
+          set_theme(get_themeUrl(theme));
+        }
+      }       
+      /*jQuery(function($){// New theme selected
+        $('body').on('click', '.change-style-menu-item', function() {
+          var theme_name = $(this).attr('rel');
+          console.log("Changement de theme " + theme_name);
+          var theme_url = get_themeUrl(theme_name);
+          console.log("URL theme : " + theme_url);
+          set_theme(theme_url);
+        });
+      });  */    
+      function get_themeUrl(theme_name){//  Get theme URL
+        $('#labelTheme').html("Th&egrave;me : " + theme_name);
+        var url_theme = "css/bootstrap.min.css";
+        if (supports_storage) {//save into the local database the selected theme
+          localStorage.theme = theme_name;
+        }
+        return url_theme;
+      }      
+      function set_theme(theme_url) {//  Apply theme
+        $('link[title="main"]').attr('href', theme_url);
+      }      
+      function supports_html5_storage(){//  local storage available ?
+        try {
+          return 'localStorage' in window && window['localStorage'] !== null;
+        } catch (e) {
+          return false;
+        }
+      }
+    </script>
+    
+  </body>
+</html

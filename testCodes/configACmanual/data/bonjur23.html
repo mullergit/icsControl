@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+  <html>
+  <head>
+    <meta name="viewport">
+    <meta charset="utf-8">
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/bootstrap-table.min.js"></script>
+    <!--<script src="js/bonjur.js"></script>-->
+    <link rel="stylesheet" href="css/bootstrap-table.min.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    
+    <title>ICS Control</title>
+  </head>
+  <body onload="updateMesures()">
+    <div class="container-fluid">
+      <h1>Controlador de Índice de Conforto Térmico para SPLIT </h1>
+      <ul class="nav nav-tabs" id="tab">
+        <li class="active"><a href="#tab_mesures" data-toggle="tab">Monitoramento</a></li>
+        <li><a href="#tab_graphs" data-toggle="tab">Gráficos</a></li>
+        <li><a href="#tab_gpio" data-toggle="tab">Controle  </a></li>
+        <li><a href="#tab_configuration" data-toggle="tab">Configuração do Ar condicionado</a></li>
+        <li><a href="#tab_configurationWiFi" data-toggle="tab">Configuração da rede</a></li>
+      </ul>
+      <div class="tab-content">
+        <div class="tab-pane fade in active" id="tab_mesures">         
+          <h2>Monitoramento da temperatura, velocidade do ar e índice de conforto (ICS)</h2>
+          <ul class="nav nav-pills">
+            <li class="active"><a href="#">
+                <div class="span badge pull-right" id="temperature">-</div> Temperatura</a></li>
+            <li><a href="#">
+                <div class="span badge pull-right" id="humidite">-</div> Velocidade do ar</a></li>
+            <li><a href="#">
+                <div class="span badge pull-right" id="pa">-</div> ICS</a></li>
+          </ul><br>
+
+          <table id="table_mesures" data-toggle="table" data-show-colunns="true">
+            <thead>
+              <tr>
+                <th data-field="mesure" data-align="left" data-sortable="true" data-formatter="labelFormatter">Mesure</th>
+                <th data-field="valeur" data-align="left" data-sortable="true" data-formatter="valueFormatter">Valeur</th>
+                <th data-field="precedente" data-align="left" data-sortable="true" data-formatter="vpFormatter">Valeur Pr&eacute;c&eacute;dente</th>
+              </tr>
+            </thead>
+          </table>
+
+        </div>
+
+        <div class="tab-pane fade" id="tab_graphs">
+          <h2>Histórico</h2>
+        </div>
+
+        <div class="tab-pane fade" id="tab_gpio">
+          <h2>GPIO</h2>
+          <div class="row">
+            <div class="col-xs-6 col-md-4">
+              <h4 class="text-left">D8
+                <div class="span badge" id="D8_etat">OFF</div>
+              </h4>
+            </div>
+            <div class="col-xs-6 col-md-4">
+              <div class="button btn btn-success btn-lg" id="D8_On" type="button">ON</div>
+            </div>
+            <div class="col-xs-6 col-md-4">
+              <div class="button btn btn-danger btn-lg" id="D8_Off" type="button">OFF</div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="tab_configuration">
+          <h2>Configuração do tipo de ar condicionado        </h2>
+
+          <p> Para configurar aponte o controle remoto do ar condicionado para o controlador ICS-control</p>
+          <P> Aperte a tecla ON/OFF duas vezes, em seguida clique em iniciar.</P>
+          
+          <div class="row">
+            <div class="col-xs-6 col-md-4">
+                <h4 class="text-left">Status:
+                    <div class="span badge" id="statusConfig">Aguardando inicio da configuração</div>
+                  </h4>
+            </div>
+            <div class="col-xs-6 col-md-4">                
+              <div class="button btn btn-success btn-lg" id="bt_iniciarConfig" type="button">INICIAR</div>
+            </div>
+            <div><input type="button"  onclick="updateMesures()" value="Button2" id="btn2" /></div>
+          </div>
+
+        </div>
+
+        <div class="tab-pane fade" id="tab_configurationWiFi">
+          <h2>Configuração da rede wifi        </h2>
+          
+        </div>
+
+      </div>
+
+    </div>
+    <script>
+    var Timer_UdpateMesures;
+      
+      $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {   
+        //On supprime tous les timers lorsqu'on change d'onglet
+        clearTimeout(Timer_UdpateMesures);  
+        var target = $(e.target).attr("href")  
+        console.log('activated ' + target );  
+      
+        // IE10, Firefox, Chrome, etc.
+        if (history.pushState) 
+          window.history.pushState(null, null, target);
+        else 
+          window.location.hash = target;        
+        if (target=='#tab_mesures')  {
+          $('#table_mesures').bootstrapTable('refresh',{silent:true, url:'/tabmesures.json'}); 
+        }  
+      });
+
+      // Create a timer than update data every n seconds
+      $('#tab_mesures').on('load-success.bs.table',function (e,data){
+        console.log("tab_mesures loaded");
+        if ($('.nav-tabs .active > a').attr('href')=='#tab_mesures') {
+          Timer_UdpateMesures=setTimeout(function(){
+            $('#table_mesures').bootstrapTable('refresh',{silent: true, showLoading: false, url: '/mesures.json'});//'/tabmesures.json'});
+            updateMesures();
+          },30000);
+        }                 
+      });   
+          
+      function updateMesures(){
+        $.getJSON('/mesures.json', function(data){
+          console.log("Mesures envoyees : " + JSON.stringify(data) + "|" + data.t + "|" + data.h + "|" + data.pa) ;
+          $('#temperature').html(data.t);
+          $('#humidite').html(data.h);
+          $('#pa').html(data.pa); 
+        }).fail(function(err){
+          console.log("err getJSON mesures.json "+JSON.stringify(err));
+        });
+      };
+      
+      function labelFormatter(value, row){
+        //console.log("labelFormatter");
+        //console.log(value);
+        //console.log(row);
+        var label = "";
+        if ( value === "Température" ) {
+          label = value + "<span class='glyphicon " + row.glyph + " pull-left'></span>";
+        } else if ( value === "Humidité" ) {
+          label = value + "<span class='glyphicon " + row.glyph + " pull-left'></span>";
+        } else if ( value === "Pression Atmosphérique" ) {
+          label = value + "<span class='glyphicon " + row.glyph + " pull-left'></span>";
+        } else {
+          label = value;
+        } 
+        return label;
+      }
+      function valueFormatter(value, row){
+        //console.log("valueFormatter");
+        var label = "";
+        if ( row.valeur > row.precedente ) {
+          label = value + row.unite + "<span class='glyphicon glyphicon-chevron-up pull-right'></span>";
+        } else { 
+          label = value + row.unite + "<span class='glyphicon glyphicon-chevron-down pull-right'></span>";
+        }
+        return label;
+      }
+      function vpFormatter(value, row){
+        console.log("vpFormatter");
+        var label = "";
+        if ( row.valeur > row.precedente ) {
+          label = value + row.unite
+        } else { 
+          label = value + row.unite
+        }
+        return label;
+      }  
+
+      $('#bt_iniciarConfig').click(function(){ initACconfig(); });
+
+      function ChangeColorBtn2() {  
+        document.getElementById('btn2').style.backgroundColor='Red';          
+   }
+      function initACconfig(){
+        $.getJSON('/initACconfig.json', function(data){
+          console.log("GET(initACconfig )" );
+          console.log("statusConfig : " + JSON.stringify(data)) ;
+          document.getElementById('statusConfig').style.Color='Red'; 
+          $('#statusConfig').html(data.status);
+        }).fail(function(err){
+          console.log("err GET(initACconfig");
+        });
+      }; 
+      
+      $('#D8_On').click(function(){ setBouton('D8','1'); });
+      $('#D8_Off').click(function(){ setBouton('D8','0'); });
+      
+      function setBouton(id, etat){
+        $.post("gpio?id=" + id + "&etat=" + etat).done(function(data){
+          console.log("Retour setBouton " + JSON.stringify(data)); 
+          var id_gpio = "#" + id + "_etat";
+          console.log(id_gpio);
+          if ( data.success === "1" ) {
+            if ( data.etat === "1" ) {
+              $(id_gpio).html("ON");
+            } else {
+              $(id_gpio).html("OFF");
+            }  
+          } else {
+            $(id_gpio).html('!');
+          }      
+        }).fail(function(err){
+          console.log("err setButton " + JSON.stringify(err));
+        });
+      } 
+      
+      // Changement du thème - Change current theme
+      // Adapté de - Adapted from : https://wdtz.org/bootswatch-theme-selector.html
+      var supports_storage = supports_html5_storage();
+      if (supports_storage) {
+        var theme = localStorage.theme;
+        console.log("Recharge le theme " + theme);
+        if (theme) {
+          set_theme(get_themeUrl(theme));
+        }
+      }
+      
+      // Un nouveau thème est sélectionné - New theme selected
+      jQuery(function($){
+        $('body').on('click', '.change-style-menu-item', function() {
+          var theme_name = $(this).attr('rel');
+          console.log("Changement de theme " + theme_name);
+          var theme_url = get_themeUrl(theme_name);
+          console.log("URL theme : " + theme_url);
+          set_theme(theme_url);
+        });
+      });
+      // Recupere l'adresse du theme - Get theme URL
+      function get_themeUrl(theme_name){
+        $('#labelTheme').html("Th&egrave;me : " + theme_name);
+        var url_theme = "";
+        if ( theme_name === "bootstrap" ) {
+          url_theme = "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css";
+        } else {
+          url_theme = "https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/" + theme_name + "/bootstrap.min.css";
+        }
+        if (supports_storage) {
+          // Enregistre le theme sélectionné en local - save into the local database the selected theme
+          localStorage.theme = theme_name;
+        }
+        return url_theme;
+      }
+      // Applique le thème - Apply theme
+      function set_theme(theme_url) {
+        $('link[title="main"]').attr('href', theme_url);
+      }
+      // Stockage local disponible ? - local storage available ?
+      function supports_html5_storage(){
+        try {
+          return 'localStorage' in window && window['localStorage'] !== null;
+        } catch (e) {
+          return false;
+        }
+      }
+    </script>
+    
+  </body>
+</html
